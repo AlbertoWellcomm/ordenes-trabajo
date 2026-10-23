@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Gestor y Generador de Órdenes de Trabajo para Imprenta Comercial. Compatible con sincronización en la nube gratuita y generación de PDF exactos.">
+  <title>Órdenes de Trabajo - Impremta Comercial 1940</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+  <!-- ======================================================================
+       CABECERA PRINCIPAL (NAVBAR)
+       ====================================================================== -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-section">
+        <div class="brand-logo-circles" aria-hidden="true">
+          <span class="circle c1"></span>
+          <span class="circle c2"></span>
+          <span class="circle c3"></span>
+          <span class="circle c4">1940</span>
+        </div>
+        <div>
+          <h1 class="brand-title">IMPREMTA COMERCIAL</h1>
+          <div class="brand-subtitle">Gestión de Órdenes de Trabajo</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Estado de Sincronización en la Nube -->
+        <button id="cloudStatusBadge" class="cloud-status-badge local" type="button" onclick="abrirModalNube()" title="Configurar Nube">
+          <span class="dot"></span>
+          <span id="cloudStatusText">Modo Local</span>
+        </button>
+
+        <!-- Estado de Sesión / Usuario -->
+        <button id="btnAuthUser" class="btn btn-secondary btn-sm" type="button" onclick="abrirModalAuth()" title="Acceso de Usuario y Privacidad">
+          <span id="authIcon">🔒</span> <span id="authText">Iniciar Sesión</span>
+        </button>
+
+        <!-- Botón Configuración de Nube -->
+        <button id="btnCloudSettingsNav" class="btn btn-secondary btn-sm" type="button" onclick="abrirModalNube()" title="Configuración de la Nube (Firebase)">
+          ☁️ Nube
+        </button>
+
+        <!-- Copias de Seguridad (JSON) -->
+        <button id="btnBackupExport" class="btn btn-secondary btn-sm" type="button" title="Descargar Copia de Seguridad JSON">
+          💾 Exportar
+        </button>
+        <button id="btnBackupImport" class="btn btn-secondary btn-sm" type="button" title="Cargar Copia de Seguridad JSON">
+          📂 Importar
+        </button>
+        <input type="file" id="fileImportInput" accept=".json" style="display: none;">
+
+        <!-- Selector de Tema (Modo Oscuro / Claro) -->
+        <button id="btnToggleTheme" class="btn btn-secondary btn-sm btn-icon-only" type="button" title="Cambiar Tema Oscuro/Claro">
+          <span id="themeIcon">🌙</span>
+        </button>
+
+        <!-- Botón Principal: Nueva Orden -->
+        <button id="btnNewOrder" class="btn btn-primary" type="button">
+          <span style="font-size: 1.1rem; line-height: 1;">+</span> Nueva Orden
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       CONTENIDO PRINCIPAL
+       ====================================================================== -->
+  <main class="main-layout">
+
+    <!-- Tarjeta de Búsqueda y Filtros -->
+    <section class="filter-card" aria-label="Filtros de búsqueda">
+      <div class="filter-grid">
+        <!-- Filtro por Cliente con Autocompletado -->
+        <div class="form-group">
+          <label for="filterCliente">🔍 Buscar por Cliente</label>
+          <input type="text" id="filterCliente" class="form-control" placeholder="Escribe el nombre del cliente..." autocomplete="off">
+          <div id="clientSuggestions" class="autocomplete-dropdown"></div>
+        </div>
+
+        <!-- Rango de Fechas: Desde -->
+        <div class="form-group">
+          <label for="filterFechaDesde">📅 Fecha Desde</label>
+          <input type="date" id="filterFechaDesde" class="form-control">
+        </div>
+
+        <!-- Rango de Fechas: Hasta -->
+        <div class="form-group">
+          <label for="filterFechaHasta">📅 Fecha Hasta</label>
+          <input type="date" id="filterFechaHasta" class="form-control">
+        </div>
+
+        <!-- Búsqueda General (Factura, P, G, descripción...) -->
+        <div class="form-group">
+          <label for="filterGeneral">🔎 Búsqueda Global</label>
+          <input type="text" id="filterGeneral" class="form-control" placeholder="Nº Factura, P, G, texto...">
+        </div>
+
+        <!-- Botón Limpiar Filtros -->
+        <div class="form-group" style="justify-content: flex-end;">
+          <button id="btnClearFilters" class="btn btn-secondary" type="button" style="width: 100%;">
+            Limpiar Filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Atajos Rápidos de Fechas -->
+      <div class="quick-date-chips">
+        <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); align-self: center; margin-right: 4px;">Atajos:</span>
+        <button type="button" class="chip active" data-range="all">Todo</button>
+        <button type="button" class="chip" data-range="today">Hoy</button>
+        <button type="button" class="chip" data-range="week">Últimos 7 días</button>
+        <button type="button" class="chip" data-range="month">Este mes</button>
+        <button type="button" class="chip" data-range="3months">Últimos 3 meses</button>
+      </div>
+    </section>
+
+    <!-- Barra de Control de Resultados y Vista -->
+    <div class="results-header">
+      <div class="results-count">
+        Mostrando <span id="resultsCountSpan">0</span> órdenes de trabajo
+      </div>
+
+      <div class="view-controls">
+        <button id="btnViewGrid" class="btn btn-primary btn-sm" type="button" title="Vista en tarjetas">
+          🗂️ Tarjetas
+        </button>
+        <button id="btnViewTable" class="btn btn-secondary btn-sm" type="button" title="Vista en tabla">
+          📑 Tabla
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenedor dinámico de Órdenes -->
+    <section id="ordersContainer" aria-label="Listado de órdenes de trabajo">
+      <!-- Se puebla dinámicamente con JavaScript -->
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       MODAL: FORMULARIO Y EDITOR DE ORDEN DE TRABAJO
+       ====================================================================== -->
+  <div id="orderModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalOrderTitle">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 id="modalOrderTitle" class="modal-title">Orden de Trabajo</h2>
+        <button id="btnCloseModal" class="btn btn-secondary btn-sm btn-icon-only" type="button" title="Cerrar ventana">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Columna Izquierda: Formulario Digital Estructurado -->
+        <div class="form-column">
+          <form id="orderForm" onsubmit="return false;">
+
+            <!-- Sección 1: Datos del Cliente -->
+            <div class="form-section-card">
+              <div class="section-title">👤 Datos del Cliente</div>
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label for="formCliente">Cliente *</label>
+                  <input type="text" id="formCliente" name="cliente" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="formAttn">Attn</label>
+                  <input type="text" id="formAttn" name="attn" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-grid-3" style="margin-top: 0.65rem;">
+                <div class="form-group">
+                  <label for="formEntrega">Entrega</label>
+                  <input type="text" id="formEntrega" name="entrega" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formTel">Teléfono</label>
+                  <input type="text" id="formTel" name="tel" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formPoblacion">Población</label>
+                  <input type="text" id="formPoblacion" name="poblacion" class="form-control">
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección 2: Administrativo y Fechas -->
+            <div class="form-section-card">
+              <div class="section-title">📑 Administrativo & Fechas</div>
+              <div class="form-grid-4">
+                <div class="form-group">
+                  <label for="formFecha">Fecha Orden</label>
+                  <input type="date" id="formFecha" name="fecha" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formFechaEntrega">Fecha Entrega</label>
+                  <input type="date" id="formFechaEntrega" name="fechaEntrega" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formPresupuestoNo" style="color: var(--accent);">Presupuesto Nº</label>
+                  <input type="text" id="formPresupuestoNo" name="presupuestoNo" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formPedidoNo">Pedido Nº</label>
+                  <input type="text" id="formPedidoNo" name="pedidoNo" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-grid-3" style="margin-top: 0.65rem;">
+                <div class="form-group">
+                  <label for="formAlbaranNo">Albarán Nº</label>
+                  <input type="text" id="formAlbaranNo" name="albaranNo" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formFacturaNo">Factura Nº</label>
+                  <input type="text" id="formFacturaNo" name="facturaNo" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formPrecio" style="color: #059669; font-weight: 800;">PRECIO</label>
+                  <input type="text" id="formPrecio" name="precio" class="form-control" style="font-weight: 700; color: #059669;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección 3: Descripción del Trabajo Realizado -->
+            <div class="form-section-card">
+              <div class="section-title">📝 Descripción Trabajo Realizado</div>
+              <div class="form-grid-2">
+                <div class="form-group" style="max-width: 120px;">
+                  <label for="formDescCantidad">Cantidad</label>
+                  <input type="text" id="formDescCantidad" name="descCantidad" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formDescLinea1">Descripción Línea 1</label>
+                  <input type="text" id="formDescLinea1" name="descLinea1" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 0.5rem;">
+                <label for="formDescLinea2">Descripción Línea 2</label>
+                <input type="text" id="formDescLinea2" name="descLinea2" class="form-control">
+              </div>
+
+              <div class="form-grid-2" style="margin-top: 0.5rem;">
+                <div class="form-group">
+                  <label for="formDescLinea3">Descripción Línea 3</label>
+                  <input type="text" id="formDescLinea3" name="descLinea3" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formDescLinea4">Descripción Línea 4</label>
+                  <input type="text" id="formDescLinea4" name="descLinea4" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-grid-3" style="margin-top: 0.65rem;">
+                <div class="form-group">
+                  <label for="formMedidaFinal">Medida Final</label>
+                  <input type="text" id="formMedidaFinal" name="medidaFinal" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formTinta">Tinta</label>
+                  <input type="text" id="formTinta" name="tinta" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formNumerado">Numerado</label>
+                  <input type="text" id="formNumerado" name="numerado" class="form-control">
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección 4: Especificaciones de Papel -->
+            <div class="form-section-card">
+              <div class="section-title">📄 Papel & Copiativo</div>
+              <div class="form-grid-4">
+                <div class="form-group">
+                  <label for="formPapel">Papel</label>
+                  <input type="text" id="formPapel" name="papel" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formGramaje">Gramaje</label>
+                  <input type="text" id="formGramaje" name="gramaje" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formMedidaPapel">Medida</label>
+                  <input type="text" id="formMedidaPapel" name="medidaPapel" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label for="formPedidoPapel">Pedido Papel</label>
+                  <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="checkbox" id="formPedidoPapelCheck" name="pedidoPapelCheck">
+                    <input type="text" id="formPedidoPapel" name="pedidoPapel" class="form-control">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Casillas Autocopiativo -->
+              <div style="margin-top: 0.85rem; display: flex; gap: 1.25rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <label class="checkbox-inline">
+                    <input type="checkbox" name="cbCheck"> CB
+                  </label>
+                  <input type="text" name="cbTexto" class="form-control" style="width: 95px; padding: 0.25rem 0.45rem;">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <label class="checkbox-inline">
+                    <input type="checkbox" name="cfbBotCheck"> CFB
+                  </label>
+                  <input type="text" name="cfbBotTexto" class="form-control" style="width: 95px; padding: 0.25rem 0.45rem;">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <label class="checkbox-inline">
+                    <input type="checkbox" name="cfCheck"> CF
+                  </label>
+                  <input type="text" name="cfTexto" class="form-control" style="width: 95px; padding: 0.25rem 0.45rem;">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                  <label class="checkbox-inline">
+                    <input type="checkbox" name="cfbTopCheck"> CFB (sup)
+                  </label>
+                  <input type="text" name="cfbTopTexto" class="form-control" style="width: 95px; padding: 0.25rem 0.45rem;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección 5: Repetición de Trabajo y Números P y G -->
+            <div class="form-section-card" style="border-left: 4px solid var(--accent);">
+              <div class="section-title">
+                <span>🔄 Repetición de Trabajo y Números de Taller</span>
+              </div>
+              
+              <!-- Fila Superior: Repetición Trabajo (Campos de arriba) -->
+              <div style="background: var(--bg-card); padding: 0.65rem; border-radius: var(--radius-sm); margin-bottom: 0.75rem; border: 1px solid var(--border-color);">
+                <div style="font-size: 0.75rem; font-weight: 800; color: var(--accent); margin-bottom: 0.4rem;">
+                  REPETICIÓN TRABAJO (CAMPOS DE ARRIBA - TRABAJO ANTERIOR)
+                </div>
+                <div class="form-grid-4">
+                  <div class="form-group">
+                    <label for="formNumeroP_arriba">Número P (Arriba)</label>
+                    <input type="text" id="formNumeroP_arriba" name="numeroP_arriba" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label for="formNumeroG_arriba">Número G (Arriba)</label>
+                    <input type="text" id="formNumeroG_arriba" name="numeroG_arriba" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label for="formExistencia_arriba">Existencia (Arriba)</label>
+                    <input type="text" id="formExistencia_arriba" name="existencia_arriba" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label for="formFecha_repeticion">Fecha Repet.</label>
+                    <input type="date" id="formFecha_repeticion" name="fecha_repeticion" class="form-control">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fila Inferior: Trabajo Actual (Campos de abajo) -->
+              <div style="background: var(--bg-card); padding: 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                <div style="font-size: 0.75rem; font-weight: 800; color: var(--primary); margin-bottom: 0.4rem;">
+                  TRABAJO ACTUAL (CAMPOS DE ABAJO - SE COPIAN ARRIBA AL REPETIR)
+                </div>
+                <div class="form-grid-3">
+                  <div class="form-group">
+                    <label for="formNumeroP_abajo">Número P (Abajo)</label>
+                    <input type="text" id="formNumeroP_abajo" name="numeroP_abajo" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label for="formNumeroG_abajo">Número G (Abajo)</label>
+                    <input type="text" id="formNumeroG_abajo" name="numeroG_abajo" class="form-control">
+                  </div>
+                  <div class="form-group">
+                    <label for="formExistencia_abajo">Existencia (Abajo)</label>
+                    <input type="text" id="formExistencia_abajo" name="existencia_abajo" class="form-control">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección 6: Proveedores Externos & Compo -->
+            <div class="form-section-card">
+              <div class="section-title">🏭 Proveedores Externos & Compo</div>
+              <div class="form-grid-2">
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="tipografiaCheck"> Tipografía</label>
+                  <input type="text" name="tipografiaNum" class="form-control" style="flex: 1;">
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="exaprintCheck"> Exaprint</label>
+                  <input type="text" name="exaprintNum" class="form-control" style="flex: 1;">
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="impresplaCheck"> Impresplà</label>
+                  <input type="text" name="impresplaNum" class="form-control" style="flex: 1;">
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="truyolCheck"> Truyol</label>
+                  <input type="text" name="truyolNum" class="form-control" style="flex: 1;">
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="grafixCheck"> Grafix</label>
+                  <input type="text" name="grafixNum" class="form-control" style="flex: 1;">
+                </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="arponCheck"> Arpon</label>
+                  <input type="text" name="arponNum" class="form-control" style="flex: 1;">
+                </div>
+              </div>
+
+              <div style="margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px dashed var(--border-color); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <label class="checkbox-inline"><input type="checkbox" name="compoCheck"> COMPO</label>
+                <label class="checkbox-inline"><input type="checkbox" name="compo45x32"> 45x32</label>
+                <label class="checkbox-inline"><input type="checkbox" name="compo48x33"> 48x33</label>
+                <label class="checkbox-inline"><input type="checkbox" name="compo48x32_5"> 48x32,5</label>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span style="font-size: 0.8rem; font-weight: 700;">Hojas:</span>
+                  <input type="text" name="hojas" class="form-control" style="width: 100px; padding: 0.25rem 0.5rem;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Sección 7: Acabados -->
+            <div class="form-section-card">
+              <div class="section-title">✂️ Acabados</div>
+              <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
+                <label class="checkbox-inline"><input type="checkbox" name="hendido"> Hendido</label>
+                <label class="checkbox-inline"><input type="checkbox" name="doblado"> Doblado</label>
+                <label class="checkbox-inline"><input type="checkbox" name="cosido"> Cosido</label>
+                <label class="checkbox-inline"><input type="checkbox" name="talonarios"> Talonarios</label>
+                <label class="checkbox-inline"><input type="checkbox" name="encolado"> Encolado</label>
+                <label class="checkbox-inline"><input type="checkbox" name="cabeza"> Cabeza</label>
+                <label class="checkbox-inline"><input type="checkbox" name="lomo"> Lomo</label>
+                <label class="checkbox-inline"><input type="checkbox" name="taladro"> Taladro</label>
+                <label class="checkbox-inline"><input type="checkbox" name="plastificado"> Plastificado</label>
+                <label class="checkbox-inline"><input type="checkbox" name="brillo"> Brillo</label>
+                <label class="checkbox-inline"><input type="checkbox" name="mate"> Mate</label>
+              </div>
+            </div>
+
+            <!-- Sección 8: Observaciones -->
+            <div class="form-section-card">
+              <div class="section-title">💬 Observaciones Generales</div>
+              <div class="form-group">
+                <textarea id="formObservaciones" name="observaciones" class="form-control" rows="4"></textarea>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- Columna Derecha: Vista Previa Fiel de la Hoja -->
+        <div class="sheet-preview-column">
+          <div class="sheet-preview-header">
+            <span class="sheet-preview-title">Vista Previa Fiel (A4)</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Réplica exacta de la hoja física</span>
+          </div>
+
+          <div class="sheet-paper" id="paperPreview">
+            <!-- Cabecera -->
+            <div class="sheet-top-header">
+              <div class="sheet-logo-text">●●● IMPREMTA COMERCIAL 1940</div>
+              <div class="sheet-dates">
+                <div>FECHA: <span id="prevFecha" style="font-weight: 900;"></span></div>
+                <div>FECHA ENTREGA: <span id="prevFechaEntrega"></span></div>
+              </div>
+            </div>
+
+            <div class="sheet-black-banner">ORDEN DE TRABAJO</div>
+
+            <!-- Caja Cliente / Admin -->
+            <div class="sheet-box-grid">
+              <div class="sheet-box-left">
+                <div class="sheet-row-field">
+                  <span class="sheet-label">CLIENTE:</span>
+                  <span class="sheet-val" id="prevCliente" style="font-size: 11px; font-weight: 900;"></span>
+                </div>
+                <div class="sheet-row-field">
+                  <span class="sheet-label">ATTN:</span>
+                  <span class="sheet-val" id="prevAttn"></span>
+                </div>
+                <div class="sheet-row-field">
+                  <span class="sheet-label">ENTREGA:</span>
+                  <span class="sheet-val" id="prevEntrega"></span>
+                </div>
+                <div class="sheet-row-field">
+                  <span class="sheet-label">TEL:</span>
+                  <span class="sheet-val" id="prevTel" style="max-width: 100px;"></span>
+                  <span class="sheet-label">POBLACIÓN:</span>
+                  <span class="sheet-val" id="prevPoblacion"></span>
+                </div>
+              </div>
+
+              <div class="sheet-box-right">
+                <div class="sheet-admin-nums">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                    <div>PRESUPUESTO Nº: <span id="prevPresupuesto" style="font-weight: 800;"></span></div>
+                    <div>PEDIDO Nº: <span id="prevPedido"></span></div>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <div>ALBARÁN Nº: <span id="prevAlbaran"></span></div>
+                    <div>FACTURA Nº: <span id="prevFactura" style="font-weight: 800;"></span></div>
+                  </div>
+                </div>
+                <div class="sheet-price-row">
+                  <div class="sheet-price-header">PRECIO</div>
+                  <div class="sheet-price-val" id="prevPrecio"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cuerpo Centro -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #000; margin-bottom: 4px;">
+              <div style="padding: 6px; border-right: 1px solid #000;">
+                <div style="font-weight: 900; margin-bottom: 4px;">DESCRIPCIÓN TRABAJO REALIZADO:</div>
+                <div style="display: flex; gap: 4px; margin-bottom: 2px;">
+                  <span style="border: 1px solid #000; padding: 2px 4px; font-weight: 900;" id="prevDescCant"></span>
+                  <span style="font-weight: 900;" id="prevDescL1"></span>
+                </div>
+                <div style="font-weight: 900; margin-bottom: 6px;" id="prevDescL2"></div>
+
+                <div style="margin-top: 6px;">MEDIDA FINAL: <span id="prevMedidaFinal" style="font-weight: 900;"></span></div>
+                <div>TINTA: <span id="prevTinta" style="font-weight: 900;"></span> · NUMERADO: <span id="prevNumerado"></span></div>
+                <div>PAPEL: <span id="prevPapel" style="font-weight: 900;"></span> · GRAMAJE: <span id="prevGramaje" style="font-weight: 900;"></span></div>
+              </div>
+
+              <div style="padding: 6px;">
+                <div style="font-weight: 900; color: #000; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 4px;">
+                  REPETICIÓN TRABAJO
+                </div>
+                <div style="margin-bottom: 6px;">
+                  <div>NÚMERO P (Ant): <strong id="prevP_arriba"></strong></div>
+                  <div>NÚMERO G (Ant): <strong id="prevG_arriba"></strong></div>
+                </div>
+
+                <div style="font-weight: 900; border-top: 1px dashed #666; padding-top: 4px; margin-bottom: 4px;">
+                  TRABAJO ACTUAL:
+                </div>
+                <div>NÚMERO P: <strong id="prevP_abajo" style="font-size: 11px;"></strong></div>
+                <div>NÚMERO G: <strong id="prevG_abajo" style="font-size: 11px;"></strong></div>
+              </div>
+            </div>
+
+            <!-- Observaciones -->
+            <div style="border: 1px solid #000; padding: 6px; min-height: 80px;">
+              <div style="font-weight: 900; margin-bottom: 4px;">OBSERVACIONES:</div>
+              <div id="prevObservaciones" style="white-space: pre-wrap; font-size: 8.5px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pie del Modal con Acciones -->
+      <div class="modal-footer">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="btnRepeatModal" class="btn btn-repeat" type="button" title="Crear nueva orden repitiendo datos">
+            🔄 Repetir Trabajo
+          </button>
+          <button id="btnPrintModal" class="btn btn-secondary" type="button" title="Imprimir PDF idéntico">
+            🖨️ Imprimir PDF
+          </button>
+          <button id="btnDownloadModal" class="btn btn-secondary" type="button" title="Descargar archivo PDF">
+            ⬇️ Descargar PDF
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btnCancelModal" class="btn btn-secondary" type="button">Cancelar</button>
+          <button id="btnSaveOrder" class="btn btn-primary" type="button">💾 Guardar Orden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: CONFIGURACIÓN DE NUBE (FIREBASE FIRESTORE GRATIS)
+       ====================================================================== -->
+  <div id="cloudModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCloudTitle">
+    <div class="modal-container cloud-modal-content">
+      <div class="modal-header">
+        <h2 id="modalCloudTitle" class="modal-title">☁️ Conectar Nube Gratuita (Firebase)</h2>
+        <button id="btnCloseCloudModal" class="btn btn-secondary btn-sm btn-icon-only" type="button">✕</button>
+      </div>
+
+      <div style="padding: 1.25rem; overflow-y: auto;">
+        <div class="guide-box">
+          <strong>Pasos sencillos para conectar 2 o 3 ordenadores gratis:</strong>
+          <ol>
+            <li>Entra en <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> (gratis con tu cuenta de Google).</li>
+            <li>Crea un proyecto (ej: <em>Imprenta-Taller</em>). En la sección <strong>Firestore Database</strong>, dale a crear base de datos en modo prueba o producción.</li>
+            <li>En Configuración del Proyecto ⚙️ > Crear app Web &lt;/&gt;, copia el objeto <code>firebaseConfig</code>.</li>
+            <li>Pega el código aquí abajo y pulsa <strong>Guardar y Conectar</strong>. ¡Listo! Todo lo que guardes se sincronizará automáticamente en todos los ordenadores.</li>
+          </ol>
+        </div>
+
+        <div class="form-group">
+          <label for="firebaseConfigJson">Configuración de Firebase (JSON o fragmento):</label>
+          <textarea id="firebaseConfigJson" class="form-control" rows="8" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "tu-imprenta.firebaseapp.com",
+  "projectId": "tu-imprenta",
+  "storageBucket": "tu-imprenta.appspot.com",
+  "messagingSenderId": "...",
+  "appId": "..."
+}'></textarea>
+        </div>
+
+        <div id="cloudTestResult" style="margin-top: 0.75rem; font-size: 0.85rem; font-weight: 700;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button id="btnTestCloudConnection" class="btn btn-secondary btn-sm" type="button">
+            🔍 Probar Conexión
+          </button>
+          <button id="btnUploadLocalToCloud" class="btn btn-secondary btn-sm" type="button" title="Subir las órdenes actuales de este ordenador a la nube">
+            ⬆️ Subir Locales a Nube
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem;">
+          <button id="btnCancelCloudModal" class="btn btn-secondary" type="button">Cerrar</button>
+          <button id="btnSaveCloudConfig" class="btn btn-primary" type="button">💾 Guardar y Conectar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: AUTENTICACIÓN / PRIVACIDAD (FIREBASE AUTH)
+       ====================================================================== -->
+  <div id="authModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalAuthTitle">
+    <div class="modal-container" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 id="modalAuthTitle" class="modal-title">🔒 Acceso y Privacidad</h2>
+        <button id="btnCloseAuthModal" class="btn btn-secondary btn-sm btn-icon-only" type="button">✕</button>
+      </div>
+
+      <div style="padding: 1.25rem;">
+        <div id="authLoggedSection" style="display: none; text-align: center; padding: 1rem 0;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">👤</div>
+          <div style="font-weight: 800; font-size: 1.1rem;" id="authLoggedEmail">usuario@ejemplo.com</div>
+          <div style="color: #059669; font-size: 0.85rem; font-weight: 600; margin-top: 0.25rem;">
+            ✓ Sesión iniciada y autorizada en la Nube
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.75rem;">
+            Tus órdenes están protegidas y solo son accesibles desde los ordenadores donde inicies sesión con este usuario.
+          </p>
+          <div style="margin-top: 1.5rem;">
+            <button id="btnLogout" class="btn btn-danger btn-sm" type="button" style="width: 100%;">
+              Cerrar Sesión en este Ordenador
+            </button>
+          </div>
+        </div>
+
+        <form id="authForm" onsubmit="ejecutarLogin(); return false;">
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Para proteger tus datos e impedir que nadie no autorizado acceda a la base de datos de tu imprenta, introduce tu usuario y contraseña.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label for="authEmail">Correo Electrónico:</label>
+            <input type="email" id="authEmail" class="form-control" required placeholder="taller@imprentacomercial.com" autocomplete="username">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="authPassword">Contraseña:</label>
+            <input type="password" id="authPassword" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+          </div>
+
+          <div id="authErrorMessage" style="display: none; color: var(--danger); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem; background: var(--danger-light); padding: 0.5rem; border-radius: var(--radius-sm);"></div>
+
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <button id="btnLogin" class="btn btn-primary" type="button" onclick="ejecutarLogin()" style="width: 100%;">
+              🔑 Iniciar Sesión
+            </button>
+            <div style="font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 0.4rem; line-height: 1.4;">
+              🛡️ <strong>Acceso Privado:</strong> Solo los usuarios autorizados creados por el administrador en la consola de Firebase pueden acceder. Nadie no autorizado puede crear cuentas desde aquí.
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer" style="justify-content: flex-end;">
+        <button id="btnCancelAuthModal" class="btn btn-secondary" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor para notificaciones Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Scripts: Firebase Compat desde CDN oficial de Google -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- Librería PDF-Lib local -->
+  <script src="pdf-lib.min.js"></script>
+
+  <!-- Plantilla Vectorial Base en Base64 -->
+  <script src="template_base64.js"></script>
+
+  <!-- Motores de la Aplicación -->
+  <script src="pdf_generator.js"></script>
+  <script src="firebase_sync.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
