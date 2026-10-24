@@ -110,14 +110,14 @@ async function generarOrdenPdfBytes(data) {
   }
 
   // 4. DESCRIPCIÓN TRABAJO REALIZADO (Centro izquierda) - Por encima de las líneas
-  drawText(data.descCantidad, 52.8, 550.0, 11, true);
-  drawText(data.descLinea1, 88.8, 555.8, 10.5, true);
-  drawText(data.descLinea2, 30.8, 529.6, 10.5, true);
-  drawText(data.descLinea3, 30.8, 505.2, 10.5, true);
-  drawText(data.descLinea4, 30.8, 485.2, 10.5, true);
+  drawText(data.descCantidad, 52.8, 554.0, 11, true);
+  drawText(data.descLinea1, 88.8, 564.5, 10.5, true);
+  drawText(data.descLinea2, 30.8, 536.5, 10.5, true);
+  drawText(data.descLinea3, 30.8, 509.5, 10.5, true);
+  drawText(data.descLinea4, 30.8, 483.5, 10.5, true);
 
   // Medida final, Tinta, Numerado
-  drawText(data.medidaFinal, 93.0, 468.5, 10.5, true);
+  drawText(data.medidaFinal, 93.0, 476.0, 10.5, true);
   drawText(data.tinta, 62.2, 439.8, 10.5, true);
   drawText(data.numerado, 180.0, 439.8, 10, false);
 
