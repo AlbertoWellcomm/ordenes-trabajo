@@ -466,6 +466,9 @@ function createOrderCardHtml(order) {
         <button class="btn btn-secondary btn-sm btn-download" data-id="${order.id}" title="Descargar archivo PDF">
           ⬇️ PDF
         </button>
+        <button class="btn btn-secondary btn-sm btn-delete" data-id="${order.id}" title="Eliminar orden de trabajo" style="color: var(--danger); grid-column: span 2;">
+          🗑️ Eliminar
+        </button>
       </div>
     </div>
   `;
@@ -613,6 +616,12 @@ function abrirEditorOrden(order, esNueva = false) {
   poblarFormulario(appState.currentOrder);
   actualizarPrevisualizacionHoja(appState.currentOrder);
 
+  // Mostrar botón de eliminar solo cuando se edita una orden existente
+  const btnDeleteModal = document.getElementById('btnDeleteModal');
+  if (btnDeleteModal) {
+    btnDeleteModal.style.display = esNueva ? 'none' : 'inline-flex';
+  }
+
   modal.classList.add('active');
 }
 
@@ -620,6 +629,8 @@ function cerrarModalOrden() {
   const modal = document.getElementById('orderModal');
   modal.classList.remove('active');
   appState.currentOrder = null;
+  const btnDeleteModal = document.getElementById('btnDeleteModal');
+  if (btnDeleteModal) btnDeleteModal.style.display = 'none';
 }
 
 function poblarFormulario(order) {
@@ -640,7 +651,13 @@ function poblarFormulario(order) {
 
   fields.forEach(field => {
     const el = form.elements[field];
-    if (el) el.value = order[field] || '';
+    if (el) {
+      if (field === 'descCantidad') {
+        el.value = (order[field] || '').toString().replace(/\D/g, '');
+      } else {
+        el.value = order[field] || '';
+      }
+    }
   });
 
   const checkboxes = [
@@ -762,14 +779,69 @@ async function guardarOrdenActual() {
   });
 }
 
+let orderIdPendingDeletion = null;
+
 function confirmarEliminarOrden(id) {
   const order = appState.orders.find(o => o.id === id);
+  if (!order) return;
+
+  orderIdPendingDeletion = id;
+
+  const modal = document.getElementById('confirmDeleteModal');
+  const detailsEl = document.getElementById('deleteOrderDetails');
+
+  if (modal && detailsEl) {
+    const fechaStr = formatearFecha(order.fecha) || 'Sin fecha';
+    const clienteStr = escapeHtml(order.cliente || 'Sin Cliente');
+    const desc = [
+      order.descCantidad ? `<strong>${escapeHtml(order.descCantidad)}</strong>` : '',
+      escapeHtml(order.descLinea1 || ''),
+      escapeHtml(order.descLinea2 || '')
+    ].filter(Boolean).join(' ');
+    const pg = [
+      order.numeroP_abajo ? `P: ${escapeHtml(order.numeroP_abajo)}` : '',
+      order.numeroG_abajo ? `G: ${escapeHtml(order.numeroG_abajo)}` : ''
+    ].filter(Boolean).join(' · ');
+
+    detailsEl.innerHTML = `
+      <div style="margin-bottom: 4px;"><strong>Cliente:</strong> ${clienteStr}</div>
+      <div style="margin-bottom: 4px;"><strong>Fecha:</strong> ${fechaStr}</div>
+      ${desc ? `<div style="margin-bottom: 4px;"><strong>Trabajo:</strong> ${desc}</div>` : ''}
+      ${pg ? `<div><strong>Números:</strong> ${pg}</div>` : ''}
+    `;
+
+    modal.classList.add('active');
+  } else {
+    // Fallback nativo
+    const cliente = order.cliente || 'trabajo';
+    if (confirm(`¿Estás seguro de que deseas eliminar la orden de trabajo de "${cliente}"?\n\nEsta acción no se puede deshacer.`)) {
+      ejecutarEliminacionOrden(id);
+    }
+  }
+}
+
+function cerrarModalConfirmarEliminar() {
+  const modal = document.getElementById('confirmDeleteModal');
+  if (modal) modal.classList.remove('active');
+  orderIdPendingDeletion = null;
+}
+
+function ejecutarEliminacionOrden(id) {
+  const order = appState.orders.find(o => o.id === id);
   const cliente = order ? order.cliente : '';
-  if (confirm(`¿Estás seguro de que deseas eliminar la orden de trabajo de "${cliente}"?`)) {
-    appState.orders = appState.orders.filter(o => o.id !== id);
-    guardarOrdenesLocales();
-    aplicarFiltros();
-    mostrarToast('🗑️ Orden eliminada.', 'info');
+
+  appState.orders = appState.orders.filter(o => o.id !== id);
+  guardarOrdenesLocales();
+  aplicarFiltros();
+
+  // Si estaba abierto el modal de edición de esta misma orden, cerrarlo
+  if (appState.currentOrder && appState.currentOrder.id === id) {
+    cerrarModalOrden();
+  }
+
+  mostrarToast(`🗑️ Orden de "${cliente || 'trabajo'}" eliminada correctamente.`, 'info');
+
+  if (typeof eliminarOrdenDeNube === 'function') {
     eliminarOrdenDeNube(id);
   }
 }
@@ -931,6 +1003,38 @@ function bindUIEvents() {
   form.addEventListener('input', onFormChangeLive);
   form.addEventListener('change', onFormChangeLive);
 
+  // Restricción: en el campo Cantidad solo se pueden escribir números
+  const inputCantidad = document.getElementById('formDescCantidad');
+  if (inputCantidad) {
+    inputCantidad.addEventListener('keydown', (e) => {
+      // Permitir teclas de navegación y edición esenciales
+      const teclasPermitidas = [
+        'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+        'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+        'Home', 'End'
+      ];
+      if (teclasPermitidas.includes(e.key)) {
+        return;
+      }
+      // Permitir atajos Ctrl o Meta/Command (Copiar, Cortar, Pegar, Seleccionar todo, etc.)
+      if (e.ctrlKey || e.metaKey) {
+        return;
+      }
+      // Bloquear cualquier tecla que no sea un dígito numérico (0-9)
+      if (!/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    // Sanitización en tiempo real ante pegado de texto, autocompletado o arrastre
+    inputCantidad.addEventListener('input', (e) => {
+      const sanitized = e.target.value.replace(/\D/g, '');
+      if (e.target.value !== sanitized) {
+        e.target.value = sanitized;
+      }
+    });
+  }
+
   document.getElementById('btnSaveOrder').addEventListener('click', guardarOrdenActual);
   document.getElementById('btnCloseModal').addEventListener('click', cerrarModalOrden);
   document.getElementById('btnCancelModal').addEventListener('click', cerrarModalOrden);
@@ -952,6 +1056,16 @@ function bindUIEvents() {
     const current = recolectarDatosFormulario();
     if (current) ejecutarRepeticionTrabajo(current);
   });
+
+  // Eliminar orden desde dentro del modal de edición
+  const btnDeleteModal = document.getElementById('btnDeleteModal');
+  if (btnDeleteModal) {
+    btnDeleteModal.addEventListener('click', () => {
+      if (appState.currentOrder && appState.currentOrder.id) {
+        confirmarEliminarOrden(appState.currentOrder.id);
+      }
+    });
+  }
 
   // Backup & Restore
   document.getElementById('btnBackupExport').addEventListener('click', exportarBaseDatosJson);
@@ -977,6 +1091,24 @@ function bindUIEvents() {
   const btnReg = document.getElementById('btnRegister');
   if (btnReg) btnReg.addEventListener('click', ejecutarRegistro);
   document.getElementById('btnLogout').addEventListener('click', ejecutarLogout);
+
+  // Modal de Confirmación de Eliminación
+  const btnCloseConfirmDelete = document.getElementById('btnCloseConfirmDeleteModal');
+  if (btnCloseConfirmDelete) btnCloseConfirmDelete.addEventListener('click', cerrarModalConfirmarEliminar);
+
+  const btnCancelDelete = document.getElementById('btnCancelDelete');
+  if (btnCancelDelete) btnCancelDelete.addEventListener('click', cerrarModalConfirmarEliminar);
+
+  const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+  if (btnConfirmDelete) {
+    btnConfirmDelete.addEventListener('click', () => {
+      if (orderIdPendingDeletion) {
+        const id = orderIdPendingDeletion;
+        cerrarModalConfirmarEliminar();
+        ejecutarEliminacionOrden(id);
+      }
+    });
+  }
 
   // Cerrar modales al pulsar el fondo oscuro
   document.querySelectorAll('.modal-overlay').forEach(overlay => {

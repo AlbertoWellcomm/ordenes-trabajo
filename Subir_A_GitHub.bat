@@ -3,6 +3,8 @@ echo ============================================================
 echo   Subiendo proyecto a https://github.com/Albertowellcomm/ordenes-trabajo
 echo ============================================================
 echo.
+git add .
+git commit -m "Actualizacion: %date% %time%"
 git push -u origin main
 echo.
 if %ERRORLEVEL% equ 0 (

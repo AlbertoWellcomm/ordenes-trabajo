@@ -71,7 +71,7 @@ async function generarOrdenPdfBytes(data) {
     if (condition) {
       page.drawText('X', {
         x: Number(x),
-        y: Number(y),
+        y: Number(y) + 1.5,
         size: Number(size),
         font: helveticaBold,
         color: colorNegro,
@@ -83,21 +83,21 @@ async function generarOrdenPdfBytes(data) {
   drawText(formatearFecha(data.fecha), 465, 764.4, 10, true);
   drawText(formatearFecha(data.fechaEntrega), 505, 739.5, 10, true);
 
-  // 2. CLIENTE Y DATOS DE CONTACTO (Izquierda superior)
-  drawText(data.cliente, 81.5, 709.4, 11, true);
-  drawText(data.attn, 69.5, 661.4, 10, false);
-  drawText(data.entrega, 75.0, 634.1, 10, false);
-  drawText(data.tel, 50.0, 607.1, 10, false);
-  drawText(data.poblacion, 250.0, 607.1, 10, false);
+  // 2. CLIENTE Y DATOS DE CONTACTO (Izquierda superior) - Por encima de las líneas
+  drawText(data.cliente, 81.5, 714.4, 11, true);
+  drawText(data.attn, 69.5, 666.0, 10, false);
+  drawText(data.entrega, 75.0, 639.0, 10, false);
+  drawText(data.tel, 50.0, 612.0, 10, false);
+  drawText(data.poblacion, 250.0, 612.0, 10, false);
 
   // 3. DATOS ADMINISTRATIVOS Y PRECIO (Derecha superior)
-  drawText(data.presupuestoNo, 385.0, 709.5, 10, false);
-  drawText(data.pedidoNo, 495.0, 709.5, 10, false);
-  drawText(data.albaranNo, 360.0, 665.8, 10, false);
-  drawText(data.facturaNo, 483.9, 660.8, 11, true);
+  drawText(data.presupuestoNo, 385.0, 714.4, 10, false);
+  drawText(data.pedidoNo, 495.0, 713.5, 10, false);
+  drawText(data.albaranNo, 360.0, 670.5, 10, false);
+  drawText(data.facturaNo, 483.9, 665.8, 11, true);
   
   if (data.observacionesTop) {
-    drawText(data.observacionesTop, 310.0, 620.0, 8.5, false);
+    drawText(data.observacionesTop, 310.0, 622.0, 8.5, false);
   }
 
   // PRECIO (caja destacada debajo de PRECIO)
@@ -109,81 +109,81 @@ async function generarOrdenPdfBytes(data) {
     drawText(precioStr, 502.7, 608.2, 13.5, true);
   }
 
-  // 4. DESCRIPCIÓN TRABAJO REALIZADO (Centro izquierda)
-  drawText(data.descCantidad, 52.8, 547.0, 11, true);
-  drawText(data.descLinea1, 88.8, 550.6, 10.5, true);
-  drawText(data.descLinea2, 30.8, 524.4, 10.5, true);
-  drawText(data.descLinea3, 30.8, 500.0, 10.5, true);
-  drawText(data.descLinea4, 30.8, 480.0, 10.5, true);
+  // 4. DESCRIPCIÓN TRABAJO REALIZADO (Centro izquierda) - Por encima de las líneas
+  drawText(data.descCantidad, 52.8, 550.0, 11, true);
+  drawText(data.descLinea1, 88.8, 555.8, 10.5, true);
+  drawText(data.descLinea2, 30.8, 529.6, 10.5, true);
+  drawText(data.descLinea3, 30.8, 505.2, 10.5, true);
+  drawText(data.descLinea4, 30.8, 485.2, 10.5, true);
 
   // Medida final, Tinta, Numerado
-  drawText(data.medidaFinal, 93.0, 463.3, 10.5, true);
-  drawText(data.tinta, 62.2, 434.6, 10.5, true);
-  drawText(data.numerado, 180.0, 434.6, 10, false);
+  drawText(data.medidaFinal, 93.0, 468.5, 10.5, true);
+  drawText(data.tinta, 62.2, 439.8, 10.5, true);
+  drawText(data.numerado, 180.0, 439.8, 10, false);
 
   // Papel y gramaje
-  drawText(data.papel, 75.8, 409.5, 10.5, true);
-  drawText(data.gramaje, 69.0, 359.8, 10, true);
-  drawText(data.medidaPapel, 165.0, 359.8, 10, false);
+  drawText(data.papel, 75.8, 414.8, 10.5, true);
+  drawText(data.gramaje, 69.0, 365.0, 10, true);
+  drawText(data.medidaPapel, 165.0, 365.0, 10, false);
   drawCheck(data.pedidoPapelCheck, 205.0, 359.8, 11);
-  drawText(data.pedidoPapel, 250.0, 359.8, 10, false);
+  drawText(data.pedidoPapel, 250.0, 365.0, 10, false);
 
-  // Copiativo (CB, CFB, CF)
+  // Copiativo (CB, CFB, CF) - Por encima de las líneas
   drawCheck(data.cbCheck, 24.6, 319.2, 11);
-  drawText(data.cbTexto, 57.0, 319.1, 10, false);
+  drawText(data.cbTexto, 57.0, 324.5, 10, false);
 
   drawCheck(data.cfbTopCheck, 118.1, 336.0, 11);
-  drawText(data.cfbTopTexto, 153.6, 336.0, 10, false);
+  drawText(data.cfbTopTexto, 153.6, 341.4, 10, false);
 
   drawCheck(data.cfbBotCheck, 118.1, 320.2, 11);
-  drawText(data.cfbBotTexto, 153.6, 318.7, 10, false);
+  drawText(data.cfbBotTexto, 153.6, 324.5, 10, false);
 
   drawCheck(data.cfCheck, 213.2, 320.7, 11);
-  drawText(data.cfTexto, 245.1, 320.2, 10, false);
+  drawText(data.cfTexto, 245.1, 325.0, 10, false);
 
-  // 5. REPETICIÓN TRABAJO / NÚMEROS P y G (Centro derecha)
-  drawText(formatearFecha(data.fecha_repeticion), 485.0, 579.0, 9, false);
+  // 5. REPETICIÓN TRABAJO / NÚMEROS P y G (Centro derecha) - Por encima de las líneas
+  drawText(formatearFecha(data.fecha_repeticion), 485.0, 580.5, 9, false);
 
   // Ranura superior (Repetición previa)
-  drawText(data.numeroP_arriba, 383.1, 551.1, 12, true);
-  drawText(data.existencia_arriba, 505.0, 551.1, 10, false);
-  drawText(data.numeroG_arriba, 390.4, 529.1, 12, true);
+  drawText(data.numeroP_arriba, 383.1, 556.3, 12, true);
+  drawText(data.existencia_arriba, 505.0, 556.3, 10, false);
+  drawText(data.numeroG_arriba, 390.4, 534.3, 12, true);
 
   // Ranura inferior (Trabajo actual)
-  drawText(data.numeroP_abajo, 376.3, 504.6, 12, true);
-  drawText(data.existencia_abajo, 505.0, 504.6, 10, false);
-  drawText(data.numeroG_abajo, 389.8, 479.5, 12, true);
+  drawText(data.numeroP_abajo, 376.3, 509.8, 12, true);
+  drawText(data.existencia_abajo, 505.0, 509.8, 10, false);
+  drawText(data.numeroG_abajo, 389.8, 484.8, 12, true);
 
   // Proveedores externos / Compo
   drawCheck(data.tipografiaCheck, 308.3, 458.3, 11);
-  drawText(data.tipografiaNum, 385.0, 458.3, 9, false);
+  drawText(data.tipografiaNum, 385.0, 463.3, 9, false);
 
   drawCheck(data.exaprintCheck, 448.0, 458.5, 11);
-  drawText(data.exaprintNum, 530.0, 458.5, 9, false);
+  drawText(data.exaprintNum, 530.0, 463.5, 9, false);
 
   drawCheck(data.impresplaCheck, 308.3, 421.0, 11);
-  drawText(data.impresplaNum, 395.0, 421.0, 9, false);
+  drawText(data.impresplaNum, 395.0, 426.0, 9, false);
 
   drawCheck(data.truyolCheck, 448.0, 427.8, 11);
-  drawText(data.truyolNum, 525.0, 427.8, 9, false);
+  drawText(data.truyolNum, 525.0, 432.8, 9, false);
 
   drawCheck(data.grafixCheck, 308.3, 396.9, 11);
-  drawText(data.grafixNum, 380.0, 396.9, 9, false);
+  drawText(data.grafixNum, 380.0, 401.9, 9, false);
 
   drawCheck(data.arponCheck, 448.0, 395.8, 11);
-  drawText(data.arponNum, 525.0, 395.8, 9, false);
+  drawText(data.arponNum, 525.0, 400.8, 9, false);
 
   drawCheck(data.compoCheck, 308.3, 361.7, 11);
   drawCheck(data.compo45x32, 358.0, 374.2, 10);
   drawCheck(data.compo48x33, 358.0, 359.5, 10);
   drawCheck(data.compo48x32_5, 358.0, 345.4, 10);
-  drawText(data.hojas, 445.0, 362.4, 9, false);
+  drawText(data.hojas, 445.0, 367.4, 9, false);
 
   drawCheck(data.otroCheck, 308.3, 321.4, 11);
-  drawText(data.otroTexto, 365.0, 321.4, 9, false);
+  drawText(data.otroTexto, 365.0, 326.4, 9, false);
 
   drawCheck(data.pedidoProvCheck, 465.0, 329.9, 11);
-  drawText(data.pedidoProvNum, 505.0, 329.9, 10, true);
+  drawText(data.pedidoProvNum, 505.0, 334.9, 10, true);
 
   // 6. ACABADOS
   drawCheck(data.hendido, 24.5, 257.4, 11);
@@ -201,7 +201,7 @@ async function generarOrdenPdfBytes(data) {
   drawCheck(data.mate, 376.0, 249.3, 11);
 
   drawCheck(data.otrosAcabadosCheck, 455.0, 286.3, 11);
-  drawText(data.otrosAcabadosTexto, 510.0, 286.3, 9, false);
+  drawText(data.otrosAcabadosTexto, 510.0, 291.3, 9, false);
 
   // 7. OBSERVACIONES (Caja inferior grande)
   if (data.observaciones) {

@@ -161,6 +161,11 @@ body {
   flex-wrap: wrap;
 }
 
+/* Botón de configuración de nube oculto */
+#btnCloudSettingsNav {
+  display: none !important;
+}
+
 /* Estado de la Nube (Pill badge) */
 .cloud-status-badge {
   display: inline-flex;
@@ -561,6 +566,20 @@ body {
   background-color: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
   border-color: rgba(245, 158, 11, 0.3);
+}
+
+.btn-delete {
+  transition: var(--transition);
+}
+.btn-delete:hover {
+  background-color: var(--danger-light) !important;
+  color: var(--danger) !important;
+  border-color: var(--danger) !important;
+}
+[data-theme="dark"] .btn-delete:hover {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
 /* ==========================================================================

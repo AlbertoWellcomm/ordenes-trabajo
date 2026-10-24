@@ -40,7 +40,7 @@
         </button>
 
         <!-- Botón Configuración de Nube -->
-        <button id="btnCloudSettingsNav" class="btn btn-secondary btn-sm" type="button" onclick="abrirModalNube()" title="Configuración de la Nube (Firebase)">
+        <button id="btnCloudSettingsNav" class="btn btn-secondary btn-sm" type="button" onclick="abrirModalNube()" title="Configuración de la Nube (Firebase)" style="display: none;">
           ☁️ Nube
         </button>
 
@@ -232,7 +232,7 @@
               <div class="form-grid-2">
                 <div class="form-group" style="max-width: 120px;">
                   <label for="formDescCantidad">Cantidad</label>
-                  <input type="text" id="formDescCantidad" name="descCantidad" class="form-control">
+                  <input type="text" id="formDescCantidad" name="descCantidad" class="form-control" inputmode="numeric" pattern="[0-9]*" placeholder="0">
                 </div>
                 <div class="form-group">
                   <label for="formDescLinea1">Descripción Línea 1</label>
@@ -456,8 +456,7 @@
         <!-- Columna Derecha: Vista Previa Fiel de la Hoja -->
         <div class="sheet-preview-column">
           <div class="sheet-preview-header">
-            <span class="sheet-preview-title">Vista Previa Fiel (A4)</span>
-            <span style="font-size: 0.75rem; color: var(--text-muted);">Réplica exacta de la hoja física</span>
+            <span class="sheet-preview-title">Vista Previa</span>
           </div>
 
           <div class="sheet-paper" id="paperPreview">
@@ -565,6 +564,9 @@
           </button>
           <button id="btnDownloadModal" class="btn btn-secondary" type="button" title="Descargar archivo PDF">
             ⬇️ Descargar PDF
+          </button>
+          <button id="btnDeleteModal" class="btn btn-secondary" type="button" title="Eliminar orden de trabajo" style="color: var(--danger); display: none;">
+            🗑️ Eliminar
           </button>
         </div>
 
@@ -687,6 +689,35 @@
 
       <div class="modal-footer" style="justify-content: flex-end;">
         <button id="btnCancelAuthModal" class="btn btn-secondary" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL: CONFIRMAR ELIMINACIÓN DE ORDEN
+       ====================================================================== -->
+  <div id="confirmDeleteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalConfirmDeleteTitle">
+    <div class="modal-container" style="max-width: 480px; width: 100%;">
+      <div class="modal-header">
+        <h2 id="modalConfirmDeleteTitle" class="modal-title" style="color: var(--danger); font-size: 1.15rem;">
+          🗑️ Eliminar Orden de Trabajo
+        </h2>
+        <button id="btnCloseConfirmDeleteModal" class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--text-main); font-weight: 600;">
+          ¿Estás seguro de que deseas eliminar esta orden de trabajo?
+        </p>
+        <div id="deleteOrderDetails" style="background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; margin-bottom: 1rem; font-size: 0.875rem; line-height: 1.5;">
+          <!-- Datos dinámicos de la orden a eliminar -->
+        </div>
+        <p style="font-size: 0.82rem; color: var(--danger); margin: 0; font-weight: 600;">
+          ⚠️ Esta acción no se puede deshacer. Se eliminará permanentemente.
+        </p>
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end; gap: 0.75rem;">
+        <button id="btnCancelDelete" class="btn btn-secondary" type="button">Cancelar</button>
+        <button id="btnConfirmDelete" class="btn btn-danger" type="button">🗑️ Sí, Eliminar</button>
       </div>
     </div>
   </div>
