@@ -98,7 +98,7 @@ service cloud.firestore {
 4. ¡Listo! La barra superior mostrará tu usuario con el icono **`👤`**.
 5. En tus otros 1 o 2 ordenadores, simplemente pulsa **`🔒 Iniciar Sesión`**, pon ese mismo correo y contraseña y pulsa **"🔑 Iniciar Sesión"**. Quedará recordado automáticamente.
 Aunque la nube guarda todo en los servidores de Google, siempre tienes a mano en la barra superior los botones:
-- **💾 Exportar**: Descarga un archivo `.json` con todas tus órdenes como copia de seguridad en tu disco duro o pendrive.
+- **💾 Exportar**: Abre una ventana para elegir el **nombre personalizado** que desees para el archivo y guardarlo en la carpeta que elijas (Escritorio, Pendrive, etc.).
 - **📂 Importar**: Restaura o añade órdenes desde un archivo `.json` con un solo clic.
 
 ---

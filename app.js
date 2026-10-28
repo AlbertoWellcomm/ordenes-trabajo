@@ -1068,11 +1068,58 @@ function bindUIEvents() {
   }
 
   // Backup & Restore
-  document.getElementById('btnBackupExport').addEventListener('click', exportarBaseDatosJson);
+  document.getElementById('btnBackupExport').addEventListener('click', abrirModalExportar);
   document.getElementById('btnBackupImport').addEventListener('click', () => {
     document.getElementById('fileImportInput').click();
   });
   document.getElementById('fileImportInput').addEventListener('change', importarBaseDatosJson);
+
+  // Modal de Exportación Personalizada
+  const btnCloseExport = document.getElementById('btnCloseExportModal');
+  if (btnCloseExport) btnCloseExport.addEventListener('click', cerrarModalExportar);
+
+  const btnCancelExport = document.getElementById('btnCancelExportModal');
+  if (btnCancelExport) btnCancelExport.addEventListener('click', cerrarModalExportar);
+
+  const btnConfirmExport = document.getElementById('btnConfirmExportModal');
+  if (btnConfirmExport) btnConfirmExport.addEventListener('click', ejecutarExportacionConNombre);
+
+  const inpExportFileName = document.getElementById('exportFileName');
+  if (inpExportFileName) {
+    inpExportFileName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        ejecutarExportacionConNombre();
+      }
+    });
+  }
+
+  const btnNameToday = document.getElementById('btnExportNameToday');
+  if (btnNameToday) {
+    btnNameToday.addEventListener('click', () => {
+      const hoy = obtenerFechaFormatoHoy();
+      document.getElementById('exportFileName').value = `copia_seguridad_ordenes_${hoy}`;
+      enfocarNombreExportar();
+    });
+  }
+
+  const btnNameSimple = document.getElementById('btnExportNameSimple');
+  if (btnNameSimple) {
+    btnNameSimple.addEventListener('click', () => {
+      document.getElementById('exportFileName').value = 'copia_seguridad_ordenes';
+      enfocarNombreExportar();
+    });
+  }
+
+  const btnNameMonth = document.getElementById('btnExportNameMonth');
+  if (btnNameMonth) {
+    btnNameMonth.addEventListener('click', () => {
+      const now = new Date();
+      const ym = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
+      document.getElementById('exportFileName').value = `copia_ordenes_${ym}`;
+      enfocarNombreExportar();
+    });
+  }
 
   // Modal de Configuración de Nube
   document.getElementById('cloudStatusBadge').addEventListener('click', abrirModalNube);
@@ -1409,17 +1456,159 @@ async function sincronizarLocalesANube() {
 // ==========================================================================
 // EXPORTAR / IMPORTAR COPIA DE SEGURIDAD (JSON)
 // ==========================================================================
-function exportarBaseDatosJson() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState.orders, null, 2));
+function obtenerFechaFormatoHoy() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function enfocarNombreExportar() {
+  const inp = document.getElementById('exportFileName');
+  if (inp) {
+    inp.focus();
+    inp.select();
+  }
+}
+
+function abrirModalExportar() {
+  const modal = document.getElementById('exportModal');
+  if (!modal) return;
+
+  const totalOrders = (appState.orders || []).length;
+  const filteredOrders = (appState.filteredOrders || []).length;
+
+  // Actualizar contador visual
+  const badge = document.getElementById('exportOrdersCountBadge');
+  if (badge) {
+    badge.textContent = `${totalOrders} ${totalOrders === 1 ? 'orden' : 'órdenes'}`;
+  }
+
+  // Comprobar si hay filtro activo para permitir exportar filtradas o todas
+  const scopeContainer = document.getElementById('exportScopeContainer');
+  if (scopeContainer) {
+    if (filteredOrders > 0 && filteredOrders < totalOrders) {
+      scopeContainer.style.display = 'block';
+      const cAll = document.getElementById('exportCountAll');
+      const cFiltered = document.getElementById('exportCountFiltered');
+      if (cAll) cAll.textContent = String(totalOrders);
+      if (cFiltered) cFiltered.textContent = String(filteredOrders);
+      const radioAll = document.getElementById('exportScopeAll');
+      if (radioAll) radioAll.checked = true;
+    } else {
+      scopeContainer.style.display = 'none';
+    }
+  }
+
+  // Nombre sugerido por defecto con fecha de hoy
+  const hoy = obtenerFechaFormatoHoy();
+  const inp = document.getElementById('exportFileName');
+  if (inp) {
+    inp.value = `copia_seguridad_ordenes_${hoy}`;
+  }
+
+  modal.classList.add('active');
+  setTimeout(enfocarNombreExportar, 120);
+}
+
+function cerrarModalExportar() {
+  const modal = document.getElementById('exportModal');
+  if (modal) modal.classList.remove('active');
+}
+
+async function ejecutarExportacionConNombre() {
+  const inp = document.getElementById('exportFileName');
+  let nombreBase = inp ? inp.value.trim() : '';
+  if (!nombreBase) {
+    nombreBase = `copia_seguridad_ordenes_${obtenerFechaFormatoHoy()}`;
+  }
+
+  // Limpiar caracteres ilegales en Windows/SO
+  nombreBase = nombreBase.replace(/[\\/:*?"<>|]/g, '_');
+
+  // Si el usuario ya escribió .json al final, no duplicarlo
+  let nombreArchivoFinal = nombreBase;
+  if (!nombreArchivoFinal.toLowerCase().endsWith('.json')) {
+    nombreArchivoFinal += '.json';
+  }
+
+  // Determinar órdenes a exportar (todas o filtradas)
+  let datosAExportar = appState.orders || [];
+  const radioFiltered = document.getElementById('exportScopeFiltered');
+  if (radioFiltered && radioFiltered.checked && appState.filteredOrders) {
+    datosAExportar = appState.filteredOrders;
+  }
+
+  const jsonString = JSON.stringify(datosAExportar, null, 2);
+
+  // 1. Intentar File System Access API nativa si el navegador lo soporta
+  // Esto abre directamente el diálogo de Windows "Guardar como..." para elegir carpeta y confirmar nombre
+  if (typeof window.showSaveFilePicker === 'function') {
+    try {
+      const fileHandle = await window.showSaveFilePicker({
+        suggestedName: nombreArchivoFinal,
+        types: [{
+          description: 'Copia de Seguridad JSON (*.json)',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      const writable = await fileHandle.createWritable();
+      await writable.write(jsonString);
+      await writable.close();
+
+      cerrarModalExportar();
+      mostrarToast(`💾 Copia guardada correctamente como "${fileHandle.name}".`, 'success');
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        // El usuario canceló la ventana de guardar de Windows
+        return;
+      }
+      console.warn('showSaveFilePicker no disponible en este contexto, usando descarga estándar:', err);
+    }
+  }
+
+  // 2. Método estándar de descarga con nombre personalizado
+  const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   const downloadAnchor = document.createElement('a');
-  const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", `copia_seguridad_ordenes_${dateStr}.json`);
+  downloadAnchor.href = url;
+  downloadAnchor.download = nombreArchivoFinal;
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
   downloadAnchor.remove();
-  mostrarToast('💾 Copia de seguridad JSON descargada.', 'success');
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+  cerrarModalExportar();
+  mostrarToast(`💾 Copia de seguridad guardada como "${nombreArchivoFinal}".`, 'success');
 }
+
+function aplicarNombreSugerido(tipo) {
+  const inp = document.getElementById('exportFileName');
+  if (!inp) return;
+  const hoy = obtenerFechaFormatoHoy();
+  if (tipo === 'hoy') {
+    inp.value = `copia_seguridad_ordenes_${hoy}`;
+  } else if (tipo === 'simple') {
+    inp.value = 'copia_seguridad_ordenes';
+  } else if (tipo === 'mes') {
+    const now = new Date();
+    const ym = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
+    inp.value = `copia_ordenes_${ym}`;
+  }
+  enfocarNombreExportar();
+}
+
+function exportarBaseDatosJson() {
+  abrirModalExportar();
+}
+
+// Exponer funciones para handlers inline
+window.abrirModalExportar = abrirModalExportar;
+window.cerrarModalExportar = cerrarModalExportar;
+window.ejecutarExportacionConNombre = ejecutarExportacionConNombre;
+window.aplicarNombreSugerido = aplicarNombreSugerido;
 
 function importarBaseDatosJson(event) {
   const file = event.target.files[0];
