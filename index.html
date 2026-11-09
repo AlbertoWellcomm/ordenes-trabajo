@@ -201,16 +201,23 @@
                   <input type="date" id="formFechaEntrega" name="fechaEntrega" class="form-control">
                 </div>
                 <div class="form-group">
+                  <label for="formReferenciaNo" style="color: var(--primary); font-weight: 800;">Nº Referencia</label>
+                  <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="text" id="formReferenciaNo" name="referenciaNo" class="form-control" style="font-weight: 700; font-family: var(--font-mono, monospace);" placeholder="ej: 123-26">
+                    <button type="button" id="btnRegenRef" class="btn btn-secondary btn-sm btn-icon-only" title="Calcular siguiente número correlativo" style="flex-shrink: 0; padding: 0.3rem 0.5rem; font-size: 0.8rem;">🔄</button>
+                  </div>
+                </div>
+                <div class="form-group">
                   <label for="formPresupuestoNo" style="color: var(--accent);">Presupuesto Nº</label>
                   <input type="text" id="formPresupuestoNo" name="presupuestoNo" class="form-control">
                 </div>
+              </div>
+              <div class="form-grid-4" style="margin-top: 0.65rem;">
                 <div class="form-group">
                   <label for="formPedidoNo">Pedido Nº</label>
                   <input type="text" id="formPedidoNo" name="pedidoNo" class="form-control">
                 </div>
-              </div>
 
-              <div class="form-grid-3" style="margin-top: 0.65rem;">
                 <div class="form-group">
                   <label for="formAlbaranNo">Albarán Nº</label>
                   <input type="text" id="formAlbaranNo" name="albaranNo" class="form-control">
@@ -277,8 +284,17 @@
               <div class="section-title">📄 Papel & Copiativo</div>
               <div class="form-grid-4">
                 <div class="form-group">
-                  <label for="formPapel">Papel</label>
-                  <input type="text" id="formPapel" name="papel" class="form-control">
+                  <label for="formPapelSelect">Papel</label>
+                  <select id="formPapelSelect" name="papelSelect" class="form-control">
+                    <option value="">— Seleccionar —</option>
+                    <option value="Offset">Offset</option>
+                    <option value="Estucado">Estucado</option>
+                    <option value="Adhesivo">Adhesivo</option>
+                    <option value="Eurocalco">Eurocalco</option>
+                    <option value="__custom__">✏️ Otro (personalizado)</option>
+                  </select>
+                  <input type="text" id="formPapelCustom" name="papelCustom" class="form-control" placeholder="Escribe el tipo de papel..." style="margin-top: 4px; display: none;">
+                  <input type="hidden" id="formPapel" name="papel">
                 </div>
                 <div class="form-group">
                   <label for="formGramaje">Gramaje</label>
@@ -410,6 +426,11 @@
                   <label class="checkbox-inline"><input type="checkbox" name="arponCheck"> Arpon</label>
                   <input type="text" name="arponNum" class="form-control" style="flex: 1;">
                 </div>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <label class="checkbox-inline"><input type="checkbox" name="otroProvCheck"> Otro</label>
+                  <input type="text" name="otroProvNombre" class="form-control" placeholder="Nombre..." style="flex: 1;">
+                  <input type="text" name="otroProvNum" class="form-control" placeholder="Nº..." style="flex: 1;">
+                </div>
               </div>
 
               <div style="margin-top: 0.85rem; padding-top: 0.65rem; border-top: 1px dashed var(--border-color); display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
@@ -469,7 +490,10 @@
               </div>
             </div>
 
-            <div class="sheet-black-banner">ORDEN DE TRABAJO</div>
+            <div class="sheet-black-banner">
+              ORDEN DE TRABAJO
+              <span id="prevReferencia" style="float: right; font-size: 10px; font-weight: 900; letter-spacing: 0.5px;"></span>
+            </div>
 
             <!-- Caja Cliente / Admin -->
             <div class="sheet-box-grid">

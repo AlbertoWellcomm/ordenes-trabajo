@@ -4,6 +4,7 @@
 
 const STORAGE_KEY_ORDERS = 'imprenta_ordenes_db_v1';
 const STORAGE_KEY_THEME = 'imprenta_theme_mode';
+const STORAGE_KEY_REF_COUNTER = 'imprenta_ref_counter_v1';
 
 // Estado global de la aplicación
 let appState = {
@@ -25,6 +26,7 @@ const EJEMPLO_ROIDAL = {
   id: 'ord-ejemplo-roidal',
   fecha: new Date().toISOString().split('T')[0],
   fechaEntrega: '',
+  referenciaNo: '441-26',
   cliente: 'ROIDAL',
   attn: 'ANNA',
   entrega: '',
@@ -76,6 +78,9 @@ const EJEMPLO_ROIDAL = {
   grafixNum: '',
   arponCheck: false,
   arponNum: '',
+  otroProvCheck: false,
+  otroProvNombre: '',
+  otroProvNum: '',
   compoCheck: false,
   compo45x32: false,
   compo48x33: false,
@@ -159,6 +164,54 @@ function guardarOrdenesLocales() {
   } catch (e) {
     console.error('Error al guardar órdenes locales:', e);
   }
+}
+
+// ==========================================================================
+// GENERACIÓN AUTOMÁTICA DE NÚMERO DE REFERENCIA
+// Formato: Progresivo-Año (ej: 1-26, 2-26, 123-26...)
+// ==========================================================================
+function generarNumeroReferencia() {
+  const now = new Date();
+  const yy = String(now.getFullYear()).slice(-2);
+
+  // 1. Buscar el mayor número correlativo existente para el año en las órdenes actuales
+  let maxSeq = 0;
+  if (appState && Array.isArray(appState.orders)) {
+    appState.orders.forEach(order => {
+      if (order.referenciaNo) {
+        // Formato: <numero>-<año de 2 dígitos> (ej: 123-26)
+        const match = String(order.referenciaNo).trim().match(/^(\d+)-(\d{2})$/);
+        if (match && match[2] === yy) {
+          const num = parseInt(match[1], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Comprobar también el contador guardado en localStorage por persistencia
+  let counterData;
+  try {
+    counterData = JSON.parse(localStorage.getItem(STORAGE_KEY_REF_COUNTER) || '{}');
+  } catch (e) {
+    counterData = {};
+  }
+
+  if (counterData.yearKey === yy && typeof counterData.seq === 'number' && counterData.seq > maxSeq) {
+    maxSeq = counterData.seq;
+  }
+
+  const siguienteSeq = maxSeq + 1;
+
+  // 3. Guardar el nuevo contador anual
+  localStorage.setItem(STORAGE_KEY_REF_COUNTER, JSON.stringify({
+    yearKey: yy,
+    seq: siguienteSeq
+  }));
+
+  return `${siguienteSeq}-${yy}`;
 }
 
 // Inicializar integración en la Nube
@@ -274,6 +327,7 @@ function aplicarFiltros() {
         (order.descLinea1 && order.descLinea1.toLowerCase().includes(generalQ)) ||
         (order.descLinea2 && order.descLinea2.toLowerCase().includes(generalQ)) ||
         (order.papel && order.papel.toLowerCase().includes(generalQ)) ||
+        (order.referenciaNo && order.referenciaNo.toLowerCase().includes(generalQ)) ||
         (order.observaciones && order.observaciones.toLowerCase().includes(generalQ))
       );
       if (!match) return false;
@@ -396,6 +450,7 @@ function renderOrdersList() {
         <thead>
           <tr>
             <th>Fecha</th>
+            <th>Ref.</th>
             <th>Cliente</th>
             <th>Descripción</th>
             <th>P / G Actual</th>
@@ -433,7 +488,10 @@ function createOrderCardHtml(order) {
     <div class="order-card" data-id="${order.id}">
       <div class="order-card-header">
         <div class="order-client-name">${cliente}</div>
-        <div class="order-date-badge">${fechaStr}</div>
+        <div style="text-align: right;">
+          <div class="order-date-badge">${fechaStr}</div>
+          ${order.referenciaNo ? `<div style="font-size: 0.7rem; font-weight: 700; color: var(--primary); font-family: var(--font-mono, monospace); margin-top: 2px;">${escapeHtml(order.referenciaNo)}</div>` : ''}
+        </div>
       </div>
 
       <div class="order-meta-info">
@@ -485,6 +543,7 @@ function createOrderTableRowHtml(order) {
   return `
     <tr data-id="${order.id}">
       <td style="white-space: nowrap; font-weight: 600;">${fechaStr}</td>
+      <td style="font-family: var(--font-mono, monospace); font-size: 0.78rem; font-weight: 700; color: var(--primary);">${order.referenciaNo ? escapeHtml(order.referenciaNo) : '-'}</td>
       <td style="font-weight: 800;">${cliente}</td>
       <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${desc}</td>
       <td style="font-family: var(--font-mono); font-weight: 700;">${actualPG || '-'}</td>
@@ -567,6 +626,7 @@ function ejecutarRepeticionTrabajo(ordenOriginal) {
   nueva.id = 'ord-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
   nueva.fecha = new Date().toISOString().split('T')[0];
   nueva.fechaEntrega = '';
+  nueva.referenciaNo = generarNumeroReferencia();
 
   // 3. REGLA: "salvo presupuesto" -> queda en blanco
   nueva.presupuestoNo = '';
@@ -638,7 +698,7 @@ function poblarFormulario(order) {
   if (!form) return;
 
   const fields = [
-    'fecha', 'fechaEntrega', 'cliente', 'attn', 'entrega', 'tel', 'poblacion',
+    'fecha', 'fechaEntrega', 'referenciaNo', 'cliente', 'attn', 'entrega', 'tel', 'poblacion',
     'presupuestoNo', 'pedidoNo', 'albaranNo', 'facturaNo', 'precio', 'observacionesTop',
     'descCantidad', 'descLinea1', 'descLinea2', 'descLinea3', 'descLinea4',
     'medidaFinal', 'tinta', 'numerado', 'papel', 'gramaje', 'medidaPapel', 'pedidoPapel',
@@ -646,6 +706,7 @@ function poblarFormulario(order) {
     'fecha_repeticion', 'numeroP_arriba', 'existencia_arriba', 'numeroG_arriba',
     'numeroP_abajo', 'existencia_abajo', 'numeroG_abajo',
     'tipografiaNum', 'exaprintNum', 'impresplaNum', 'truyolNum', 'grafixNum', 'arponNum',
+    'otroProvNombre', 'otroProvNum',
     'hojas', 'otroTexto', 'pedidoProvNum', 'otrosAcabadosTexto', 'observaciones'
   ];
 
@@ -663,6 +724,7 @@ function poblarFormulario(order) {
   const checkboxes = [
     'pedidoPapelCheck', 'cbCheck', 'cfbTopCheck', 'cfbBotCheck', 'cfCheck',
     'tipografiaCheck', 'exaprintCheck', 'impresplaCheck', 'truyolCheck', 'grafixCheck', 'arponCheck',
+    'otroProvCheck',
     'compoCheck', 'compo45x32', 'compo48x33', 'compo48x32_5', 'otroCheck', 'pedidoProvCheck',
     'hendido', 'doblado', 'cosido', 'talonarios', 'encolado', 'cabeza', 'lomo', 'taladro',
     'plastificado', 'brillo', 'mate', 'otrosAcabadosCheck'
@@ -672,6 +734,25 @@ function poblarFormulario(order) {
     const el = form.elements[cb];
     if (el) el.checked = Boolean(order[cb]);
   });
+
+  // Configurar el desplegable de Papel
+  const papelSelect = document.getElementById('formPapelSelect');
+  const papelCustom = document.getElementById('formPapelCustom');
+  const papelHidden = document.getElementById('formPapel');
+  if (papelSelect && papelCustom && papelHidden) {
+    const papelValue = order.papel || '';
+    papelHidden.value = papelValue;
+    const predefined = ['', 'Offset', 'Estucado', 'Adhesivo', 'Eurocalco'];
+    if (predefined.includes(papelValue)) {
+      papelSelect.value = papelValue;
+      papelCustom.style.display = 'none';
+      papelCustom.value = '';
+    } else {
+      papelSelect.value = '__custom__';
+      papelCustom.style.display = 'block';
+      papelCustom.value = papelValue;
+    }
+  }
 }
 
 function recolectarDatosFormulario() {
@@ -683,12 +764,28 @@ function recolectarDatosFormulario() {
   const inputs = form.querySelectorAll('input, textarea, select');
   inputs.forEach(el => {
     if (!el.name) return;
+    // Saltar los campos auxiliares del desplegable de papel
+    if (el.name === 'papelSelect' || el.name === 'papelCustom') return;
     if (el.type === 'checkbox') {
       order[el.name] = el.checked;
     } else {
       order[el.name] = el.value.trim();
     }
   });
+
+  // Resolver el valor real de papel desde el desplegable
+  const papelSelect = document.getElementById('formPapelSelect');
+  const papelCustom = document.getElementById('formPapelCustom');
+  if (papelSelect) {
+    if (papelSelect.value === '__custom__') {
+      order.papel = (papelCustom ? papelCustom.value.trim() : '');
+    } else {
+      order.papel = papelSelect.value;
+    }
+  }
+  // Actualizar el hidden para la previsualización
+  const papelHidden = document.getElementById('formPapel');
+  if (papelHidden) papelHidden.value = order.papel;
 
   return order;
 }
@@ -714,6 +811,7 @@ function actualizarPrevisualizacionHoja(o) {
 
   setText('prevFecha', formatearFecha(o.fecha));
   setText('prevFechaEntrega', formatearFecha(o.fechaEntrega));
+  setText('prevReferencia', o.referenciaNo ? `Ref: ${o.referenciaNo}` : '');
   setText('prevCliente', o.cliente);
   setText('prevAttn', o.attn);
   setText('prevEntrega', o.entrega);
@@ -862,6 +960,7 @@ function bindUIEvents() {
       id: 'ord-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
       fecha: new Date().toISOString().split('T')[0],
       fechaEntrega: '',
+      referenciaNo: generarNumeroReferencia(),
       cliente: '',
       attn: '',
       entrega: '',
@@ -913,6 +1012,9 @@ function bindUIEvents() {
       grafixNum: '',
       arponCheck: false,
       arponNum: '',
+      otroProvCheck: false,
+      otroProvNombre: '',
+      otroProvNum: '',
       compoCheck: false,
       compo45x32: false,
       compo48x33: false,
@@ -1031,6 +1133,35 @@ function bindUIEvents() {
       const sanitized = e.target.value.replace(/\D/g, '');
       if (e.target.value !== sanitized) {
         e.target.value = sanitized;
+      }
+    });
+  }
+
+  // Desplegable de Papel: mostrar/ocultar campo personalizado
+  const papelSelect = document.getElementById('formPapelSelect');
+  const papelCustom = document.getElementById('formPapelCustom');
+  if (papelSelect && papelCustom) {
+    papelSelect.addEventListener('change', () => {
+      if (papelSelect.value === '__custom__') {
+        papelCustom.style.display = 'block';
+        papelCustom.focus();
+      } else {
+        papelCustom.style.display = 'none';
+        papelCustom.value = '';
+      }
+      onFormChangeLive();
+    });
+    papelCustom.addEventListener('input', onFormChangeLive);
+  }
+
+  // Botón de regenerar número de referencia
+  const btnRegenRef = document.getElementById('btnRegenRef');
+  if (btnRegenRef) {
+    btnRegenRef.addEventListener('click', () => {
+      const refInput = document.getElementById('formReferenciaNo');
+      if (refInput) {
+        refInput.value = generarNumeroReferencia();
+        onFormChangeLive();
       }
     });
   }

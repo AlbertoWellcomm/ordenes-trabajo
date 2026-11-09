@@ -83,6 +83,12 @@ async function generarOrdenPdfBytes(data) {
   drawText(formatearFecha(data.fecha), 465, 764.4, 10, true);
   drawText(formatearFecha(data.fechaEntrega), 505, 739.5, 10, true);
 
+  // Número de Referencia (esquina superior derecha)
+  if (data.referenciaNo) {
+    const refTxt = String(data.referenciaNo).startsWith('Ref') ? data.referenciaNo : `Ref: ${data.referenciaNo}`;
+    drawText(refTxt, 465, 750, 9, true);
+  }
+
   // 2. CLIENTE Y DATOS DE CONTACTO (Izquierda superior) - Por encima de las líneas
   drawText(data.cliente, 81.5, 714.4, 11, true);
   drawText(data.attn, 69.5, 666.0, 10, false);
@@ -173,6 +179,14 @@ async function generarOrdenPdfBytes(data) {
   drawCheck(data.arponCheck, 448.0, 395.8, 11);
   drawText(data.arponNum, 525.0, 400.8, 9, false);
 
+  // Proveedor "Otro" personalizado
+  if (data.otroProvCheck) {
+    drawCheck(data.otroProvCheck, 308.3, 380.0, 11);
+    const otroLabel = data.otroProvNombre ? data.otroProvNombre + ':' : 'Otro:';
+    drawText(otroLabel, 325.0, 385.0, 8.5, false);
+    drawText(data.otroProvNum, 420.0, 385.0, 9, false);
+  }
+
   drawCheck(data.compoCheck, 308.3, 361.7, 11);
   drawCheck(data.compo45x32, 358.0, 374.2, 10);
   drawCheck(data.compo48x33, 358.0, 359.5, 10);
@@ -219,9 +233,9 @@ async function generarOrdenPdfBytes(data) {
  * Genera el nombre de archivo sugerido para guardar el PDF
  */
 function generarNombrePdf(data) {
-  const p = (data.numeroP_abajo || data.numeroP_arriba || 'ORDEN').toString().trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+  const ref = (data.referenciaNo || data.numeroP_abajo || data.numeroP_arriba || 'ORDEN').toString().trim().replace(/[^a-zA-Z0-9_-]/g, '_');
   const cliente = (data.cliente || 'CLIENTE').toString().trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-  return `ORDEN_${p}_${cliente}.pdf`;
+  return `ORDEN_${ref}_${cliente}.pdf`;
 }
 
 /**
